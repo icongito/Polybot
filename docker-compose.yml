@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: polybot
+      POSTGRES_PASSWORD: polybot
+      POSTGRES_DB: polybot
+    ports:
+      - "5432:5432"
+    volumes:
+      - polybot-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polybot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - bot
+
+  bot:
+    build: .
+    env_file:
+      - .env
+    environment:
+      POLYBOT_STORAGE__DATABASE_URL: postgresql+asyncpg://polybot:polybot@postgres:5432/polybot
+      POLYBOT_STORAGE__REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "9109:9109"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["run", "--mode", "observe", "--no-tui"]
+
+volumes:
+  polybot-postgres:
