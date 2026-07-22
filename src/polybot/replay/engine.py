@@ -95,7 +95,7 @@ class ReplayEngine:
         risk = RiskEngine(
             config=config.risk,
             drift=drift,
-            kill_switch=KillSwitch(file_path="/dev/null"),
+            kill_switch=KillSwitch(file_path=None),
             geo=GeoGate(eligible=True, attestation="replay"),
         )
         self.risk = risk

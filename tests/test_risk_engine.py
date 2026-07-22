@@ -306,3 +306,27 @@ def test_unknown_clock_drift_blocks_trading() -> None:
     )
     problems = engine.check(inp)
     assert any("drift" in p for p in problems)
+
+
+def test_kill_switch_with_no_file_path_starts_disengaged() -> None:
+    """Regression: file_path=None must disable the file check entirely.
+
+    A sentinel path like /dev/null looks unused but always exists on disk,
+    so Path(...).exists() would silently and permanently engage the switch.
+    Replay explicitly passes file_path=None for exactly this reason.
+    """
+    switch = KillSwitch(file_path=None)
+    assert not switch.engaged
+
+
+def test_kill_switch_engage_sets_reason() -> None:
+    switch = KillSwitch(file_path=None)
+    switch.engage("manual")
+    assert switch.engaged
+    assert switch.engaged_reason == "manual"
+
+
+def test_kill_switch_dev_null_would_have_falsely_engaged() -> None:
+    """Documents the failure mode the fix above prevents."""
+    switch = KillSwitch(file_path="/dev/null")
+    assert switch.engaged

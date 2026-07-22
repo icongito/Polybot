@@ -52,7 +52,12 @@ class DailyRiskState:
 
 @dataclass
 class KillSwitch:
-    file_path: str
+    """A None ``file_path`` disables the file-based trigger entirely (used by
+    replay, where there is no live operator file to watch) rather than
+    relying on a sentinel path -- ``/dev/null`` and similar always exist and
+    would silently trip the switch."""
+
+    file_path: str | None
     engaged_reason: str | None = None
 
     def engage(self, reason: str) -> None:
@@ -63,7 +68,7 @@ class KillSwitch:
     def engaged(self) -> bool:
         if self.engaged_reason is not None:
             return True
-        if Path(self.file_path).exists():
+        if self.file_path is not None and Path(self.file_path).exists():
             self.engaged_reason = f"kill file present: {self.file_path}"
             metrics.KILL_SWITCH.set(1)
             return True
