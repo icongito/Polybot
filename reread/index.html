@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reread</title>
+<style>
+@font-face { font-family: 'Hanken Grotesk'; font-weight: 300; src: url(fonts/HankenGrotesk-300-latin.woff2) format('woff2'); }
+:root { --wood: #120E0B; --ivory: #EAE2D2; --brass: #D8B06A; --dim: #8A7F70; }
+html, body { margin: 0; height: 100%; background: var(--wood); overflow: hidden; }
+canvas { display: block; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--wood); }
+#ui { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--wood);
+  color: var(--ivory); font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 300; transition: opacity .6s ease; padding: 0 16px; text-align: center; }
+#ui.gone { opacity: 0; pointer-events: none; }
+#ui h1 { font-weight: 300; font-size: clamp(36px, 6vw, 60px); letter-spacing: .02em; margin: 0 0 .3em; }
+#ui p { color: var(--dim); font-size: 14px; margin: 0 0 28px; letter-spacing: .03em; }
+#ui button { font: inherit; font-size: 14px; letter-spacing: .08em; background: none; border: 1px solid var(--brass); color: var(--brass); padding: 10px 26px; cursor: pointer; }
+#ui button:hover, #ui button:focus-visible { background: var(--brass); color: var(--wood); outline: none; }
+#ui button:disabled { opacity: .4; cursor: default; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><div>
+  <h1>reread</h1>
+  <p>30 seconds. sound on.</p>
+  <button id="go" disabled>loading…</button>
+</div></div>
+<script src="film.js"></script>
+</body>
+</html>
