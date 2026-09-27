@@ -15,6 +15,7 @@ const scale = parseFloat(args.scale || '1');
 const fps = parseInt(args.fps || '60', 10);
 const sub = parseInt(args.sub || '1', 10);
 const subWorld = parseInt(args.subWorld || args.sub || '1', 10);   // raymarched chapters may use fewer
+const subFast = parseInt(args.subFast || args.subWorld || args.sub || '1', 10); // ...except during fast moves
 const out = path.resolve(args.out || path.join(ROOT, 'out', 'reel.mp4'));
 const BEAT = 60 / 128;
 const f0 = args.from ? Math.round(parseFloat(args.from) * BEAT * fps) : 0;
@@ -41,10 +42,9 @@ const { page, close } = await openReel({ scale });
 const t0 = Date.now();
 for (let f = f0; f < f1; f++) {
   const t = f / fps;
-  const b64 = await page.evaluate(([t, sub, subWorld]) => {
+  const b64 = await page.evaluate(([t, sub, subWorld, subFast]) => {
     const R = window.REEL, gl = R.gl;
-    const B = t / R.BEAT;
-    const n = B >= 9 && B < 27 ? subWorld : sub;
+    const n = R.subframeHint(t, sub, subWorld, subFast);
     R.renderAt(t, { subframes: n, shutter: 0.5 });
     const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
     const px = new Uint8Array(w * h * 4);
@@ -54,7 +54,7 @@ for (let f = f0; f < f1; f++) {
     const CH = 0x8000;
     for (let i = 0; i < px.length; i += CH) s += String.fromCharCode.apply(null, px.subarray(i, i + CH));
     return btoa(s);
-  }, [t, sub, subWorld]);
+  }, [t, sub, subWorld, subFast]);
   const buf = Buffer.from(b64, 'base64');
   if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once('drain', r));
   const done = f - f0 + 1, total = f1 - f0;

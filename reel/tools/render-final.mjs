@@ -12,13 +12,13 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, arr) =>
 const SEG = [[0, 5], [5, 9], [9, 12], [12, 16], [16, 19], [19, 23], [23, 27], [27, 32]];
 const dir = path.join(ROOT, 'out', 'segments');
 fs.mkdirSync(dir, { recursive: true });
-const scale = args.scale || '1', sub = args.sub || '6', subWorld = args.subWorld || '2', crf = args.crf || '16';
+const scale = args.scale || '1', sub = args.sub || '6', subWorld = args.subWorld || '2', subFast = args.subFast || '4', crf = args.crf || '16';
 const only = args.only != null ? String(args.only).split(',').map(Number) : null;
 SEG.forEach(([a, b], i) => {
   if (only && !only.includes(i)) return;
   const out = path.join(dir, `seg${i}.mp4`);
   console.log(`segment ${i}: beats ${a}-${b}`);
-  const r = spawnSync('node', [path.join(ROOT, 'tools', 'render.mjs'), '--scale', scale, '--sub', sub, '--subWorld', subWorld,
+  const r = spawnSync('node', [path.join(ROOT, 'tools', 'render.mjs'), '--scale', scale, '--sub', sub, '--subWorld', subWorld, '--subFast', subFast,
     '--crf', crf, '--from', String(a), '--to', String(b), '--out', out], { stdio: 'inherit' });
   if (r.status !== 0) process.exit(r.status || 1);
 });

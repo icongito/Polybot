@@ -43,6 +43,22 @@
     };
   };
 
+  // Motion-blur samples per frame for offline renders: fast choreography gets more,
+  // holds get fewer (raymarched frames are expensive), 2D frames are cheap.
+  const FAST = [[9.0, 10.15], [10.45, 10.78], [10.95, 11.25], [11.45, 11.85], [12.0, 14.35], [14.9, 16.3], [16.35, 17.75], [17.85, 19.15]];
+  R.subframeHint = function (t, sub2D = 6, subWorld = 2, subFast = 4) {
+    const B = t / R.BEAT;
+    if (B < 9 || B >= 27) return sub2D;
+    if (B >= 23) {
+      const i = R.climax.cutAt(t);
+      const world = (k) => ['plane', 'volume', 'time'].includes(R.CUTS[k][1]);
+      const iris = i > 0 && R.CUTS[i][0] <= 24.5 && t - b(R.CUTS[i][0]) < 0.075;
+      return world(i) || (iris && world(i - 1)) ? subWorld : sub2D;
+    }
+    for (const [a, c] of FAST) if (B >= a && B < c) return subFast;
+    return subWorld;
+  };
+
   // HUD: colour follows the ground; the timecode obeys the time chapter's clock
   R.hudState = function (t) {
     const B = t / R.BEAT;

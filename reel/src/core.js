@@ -101,6 +101,7 @@ void main(){ vUv = aPos*0.5+0.5; gl_Position = vec4(aPos,0.,1.); }`;
     });
     if (!gl) throw new Error('WebGL2 not available');
     R.floatOK = !!gl.getExtension('EXT_color_buffer_float');
+    R.parallel = gl.getExtension('KHR_parallel_shader_compile');
     gl.getExtension('OES_texture_float_linear');
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
@@ -116,27 +117,48 @@ void main(){ vUv = aPos*0.5+0.5; gl_Position = vec4(aPos,0.,1.); }`;
   function compile(gl, type, src) {
     const s = gl.createShader(type);
     gl.shaderSource(s, src);
-    gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-      const log = gl.getShaderInfoLog(s);
-      const lines = src.split('\n').map((l, i) => `${String(i + 1).padStart(4)}: ${l}`).join('\n');
-      console.error(lines);
-      throw new Error('Shader compile error: ' + log);
-    }
+    gl.compileShader(s);          // status is checked lazily so drivers can compile in parallel
     return s;
   }
+  function explain(gl, sh, src) {
+    if (gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return;
+    const log = gl.getShaderInfoLog(sh);
+    console.error(src.split('\n').map((l, i) => `${String(i + 1).padStart(4)}: ${l}`).join('\n'));
+    throw new Error('Shader compile error: ' + log);
+  }
 
+  R.programs = [];
   R.Program = class Program {
     constructor(fs, name = 'prog') {
       const gl = R.gl;
       this.name = name;
       const p = gl.createProgram();
-      gl.attachShader(p, compile(gl, gl.VERTEX_SHADER, VS));
-      gl.attachShader(p, compile(gl, gl.FRAGMENT_SHADER, fs));
+      this.vs = compile(gl, gl.VERTEX_SHADER, VS);
+      this.fs = compile(gl, gl.FRAGMENT_SHADER, fs);
+      this.src = fs;
+      gl.attachShader(p, this.vs);
+      gl.attachShader(p, this.fs);
       gl.bindAttribLocation(p, 0, 'aPos');
       gl.linkProgram(p);
-      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(name + ' link error: ' + gl.getProgramInfoLog(p));
       this.p = p;
+      this.ready = false;
+      R.programs.push(this);
+    }
+    // true once the driver has finished (never blocks when KHR_parallel_shader_compile exists)
+    isReady() {
+      if (this.ready) return true;
+      if (R.parallel && !R.gl.getProgramParameter(this.p, R.parallel.COMPLETION_STATUS_KHR)) return false;
+      this.finish();
+      return true;
+    }
+    finish() {
+      if (this.ready) return;
+      const gl = R.gl, p = this.p;
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+        explain(gl, this.vs, VS); explain(gl, this.fs, this.src);
+        throw new Error(this.name + ' link error: ' + gl.getProgramInfoLog(p));
+      }
+      this.ready = true;
       this.u = {};
       const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
       let unit = 0;
@@ -150,6 +172,7 @@ void main(){ vUv = aPos*0.5+0.5; gl_Position = vec4(aPos,0.,1.); }`;
       }
     }
     set(name, v) {
+      if (!this.ready) this.finish();
       const gl = R.gl, u = this.u[name];
       if (!u) return;
       switch (u.type) {
@@ -222,6 +245,7 @@ void main(){ vUv = aPos*0.5+0.5; gl_Position = vec4(aPos,0.,1.); }`;
     gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fb : null);
     const w = target ? target.w : gl.drawingBufferWidth, h = target ? target.h : gl.drawingBufferHeight;
     gl.viewport(0, 0, w, h);
+    if (!prog.ready) prog.finish();
     gl.useProgram(prog.p);
     prog.set('uRes', [w, h]);
     for (const k in uniforms) prog.set(k, uniforms[k]);
@@ -239,6 +263,26 @@ void main(){ vUv = aPos*0.5+0.5; gl_Position = vec4(aPos,0.,1.); }`;
     gl.clearColor(c[0], c[1], c[2], c[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
   };
+
+  R.allReady = () => R.programs.every((p) => p.isReady());
+  // Draw every program once into a 1x1 target so drivers build their pipelines now,
+  // not in the middle of the reel. Yields between programs so the page stays responsive.
+  R.warmup = async function (onProgress) {
+    const gl = R.gl, tiny = new R.Target(1, 1, { float: false }), px = new Uint8Array(4);
+    // a separate dummy texture on every unit, so no sampler reads the target being drawn
+    const dummy = new R.Target(1, 1, { float: false });
+    for (let i = 0; i < R.programs.length; i++) {
+      while (!R.programs[i].isReady()) await new Promise((r) => setTimeout(r, 16));
+      const U = {};
+      for (const k in R.programs[i].u) if (R.programs[i].u[k].type === gl.SAMPLER_2D) U[k] = dummy.tex;
+      R.draw(R.programs[i], tiny, U);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      if (onProgress) onProgress((i + 1) / R.programs.length);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    tiny.dispose(); dummy.dispose();
+  };
+  R.readyFraction = () => R.programs.filter((p) => p.isReady()).length / Math.max(1, R.programs.length);
 
   R.canvas2d = function (w, h) {
     const c = document.createElement('canvas');

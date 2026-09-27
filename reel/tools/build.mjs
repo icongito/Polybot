@@ -18,7 +18,9 @@ for (const f of files) {
   if (/<\/script/i.test(code)) throw new Error(`${f} contains a closing script tag`);
   inline += `<script>/* ${f} */\n${code}</script>\n`;
 }
-const full = src.replace(m[0], inline);
+let full = src.replace(m[0], inline);
+const poster = path.join(ROOT, 'out', 'poster.jpg');
+if (fs.existsSync(poster)) full = full.replace("url('out/poster.jpg')", `url('data:image/jpeg;base64,${fs.readFileSync(poster).toString('base64')}')`);
 fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'dist', 'index.html'), full);
 

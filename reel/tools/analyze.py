@@ -3,6 +3,7 @@
   python3 tools/analyze.py energy  in.mp4 out.png            # motion-energy graph vs the 128 BPM grid
   python3 tools/analyze.py strip   in.mp4 out.png  t0 n [step]  # n consecutive frames from t0 (seconds)
   python3 tools/analyze.py grid    in.mp4 out.png  [cols]       # one frame per half beat
+  python3 tools/analyze.py sheet   in.mp4 out.jpg               # one frame per beat, for the README
 """
 import os
 import subprocess
@@ -91,11 +92,28 @@ def grid(src, out, cols=8):
     img.save(out)
 
 
+def sheet(src, out, cols=8, offset=0.4):
+    """One frame per beat (sampled `offset` beats after each downbeat), labelled, as a JPEG."""
+    fr = frames(src, 480, 270)
+    sel = [min(len(fr) - 1, int(round((k + offset) * BEAT * FPS))) for k in range(32)]
+    rows = (len(sel) + cols - 1) // cols
+    pad, lab = 6, 20
+    img = Image.new('RGB', (cols * (480 + pad) + pad, rows * (270 + lab + pad) + pad), (11, 11, 12))
+    dr = ImageDraw.Draw(img)
+    for k, fi in enumerate(sel):
+        xx, yy = pad + (k % cols) * (480 + pad), pad + (k // cols) * (270 + lab + pad)
+        img.paste(Image.fromarray(fr[fi]), (xx, yy + lab))
+        dr.text((xx, yy + 3), f'beat {k:02d}   {fi / FPS:5.2f} s', fill=(143, 139, 130), font=font(13))
+    img.save(out, quality=88)
+
+
 if __name__ == '__main__':
     cmd = sys.argv[1]
     if cmd == 'energy':
         energy(sys.argv[2], sys.argv[3])
     elif cmd == 'strip':
         strip(sys.argv[2], sys.argv[3], float(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6]) if len(sys.argv) > 6 else 1)
+    elif cmd == 'sheet':
+        sheet(sys.argv[2], sys.argv[3])
     elif cmd == 'grid':
         grid(sys.argv[2], sys.argv[3], int(sys.argv[4]) if len(sys.argv) > 4 else 8)

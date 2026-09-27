@@ -14,7 +14,9 @@ The reel is one idea carried through every frame: **motion creates dimension**. 
 | 3D | `volume` | lit, extruded solids | the sphere that is the o |
 | 4D | `time` | the same solids, slit-scanned through time | a chronophotographed tittle tracing figure-eights |
 
-Then everything plays back at once, faster and faster, cuts to silence, and the sentence arrives and parks against the dot: **point made.** The dot is the full stop. The last frame is the first frame, so the reel loops seamlessly.
+Then everything plays back at once, faster and faster, cuts to silence, and the sentence arrives in the same constructed alphabet and parks against the dot: **point made.** The dot is the full stop. The last frame is the first frame, so the reel loops seamlessly.
+
+![contact sheet: one frame per beat](out/contact-sheet.jpg)
 
 ## The score
 
@@ -57,14 +59,20 @@ Generative halftone fields · shockwave refraction · impact frames · character
 
 ## Render the video
 
-Frames are rendered in headless Chromium (software WebGL is fine), read back raw and piped to ffmpeg:
+The finished render is `out/point-made.mp4` (1920×1080, 60 fps, H.264). To reproduce it, frames are rendered in headless Chromium (software WebGL is fine), read back raw and piped to ffmpeg:
 
 ```sh
-npm install                      # playwright (uses a system Chromium if PLAYWRIGHT_BROWSERS_PATH is set)
-node tools/render.mjs --scale 1 --sub 6 --subWorld 2 --out out/point-made.mp4
+npm install                                   # playwright
+node tools/render-final.mjs --sub 6 --subWorld 2 --crf 18   # 8 beat-aligned segments, then a lossless concat
+node tools/render-final.mjs --only 3          # re-render one segment after a tweak
+node tools/render.mjs --scale 0.5 --out out/preview.mp4     # quick half-res preview
 ```
 
-`--sub` is the number of motion-blur / anti-aliasing subframes per frame (180° shutter, Halton-jittered); `--subWorld` overrides it for the raymarched chapters, which are the expensive ones. Review helpers: `tools/shoot.mjs` (stills and contact sheets at chosen beats) and `tools/analyze.py` (motion-energy graph against the beat grid, filmstrips).
+`--sub` is the number of motion-blur / anti-aliasing subframes per frame (180° shutter, Halton-jittered); `--subWorld` overrides it for the raymarched chapters, which are the expensive ones (on a 4-core machine with software GL the full render takes about two hours; on a GPU it runs in real time). Review helpers: `tools/shoot.mjs` (stills and contact sheets at chosen beats), `tools/bench.mjs` (per-frame cost) and `tools/analyze.py` (motion-energy graph against the beat grid, filmstrips).
+
+## Accessibility
+
+The montage cuts on sixteenths and thirty-seconds, so its fastest section is kept inside a dark-to-mid luminance band (blue ↔ ink stays under a 10% relative-luminance swing) with colour carried by the content instead of full-frame flashes. The player honours `prefers-reduced-motion` by opening paused on a still, with a warning, instead of autoplaying.
 
 ## Code map
 
@@ -79,4 +87,6 @@ node tools/render.mjs --scale 1 --sub 6 --subWorld 2 --out out/point-made.mp4
 | `src/timeline*.js` | the choreography, expressed in beats |
 | `src/post.js`, `src/hud.js`, `src/main.js` | lens, frame, subframe accumulation |
 
-Fonts: Roboto Flex and Geist Mono, both SIL Open Font License (see `fonts/`).
+The sign-off lines live in `finaleState()` in `src/timeline-climax.js` (`captionLines`) if you want to put your own name there.
+
+Fonts: Roboto Flex (the variable-width flash words) and Geist Mono (HUD and captions), both SIL Open Font License (see `fonts/`). Every chapter word and the final sentence use the custom constructed alphabet in `src/glyphs.js`.
