@@ -53,8 +53,14 @@
       R.director(t, accum, env);
     } else {
       R.clear(accum, [0, 0, 0, 0]);
+      // shutter interval, clipped so a frame never blends across a hard cut
+      let a = t - 0.5 * shutter / R.FPS, z = t + 0.5 * shutter / R.FPS;
+      for (const c of R.CUT_TIMES || []) {
+        if (c > a && c <= t) a = c;
+        if (c > t && c < z) z = c - 1e-6;
+      }
       for (let i = 0; i < N; i++) {
-        const ts = t + ((i + 0.5) / N - 0.5) * shutter / R.FPS;
+        const ts = a + ((i + 0.5) / N) * (z - a);
         const e = { scale: R.scale, jitter: [halton(i, 2) - 0.5, halton(i, 3) - 0.5], shake: R.shakeAt(ts) };
         R.director(ts, sceneT, e);
         R.draw(blit, accum, { uTex: sceneT.tex, uAlpha: 1 / N }, 'add');

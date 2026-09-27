@@ -30,6 +30,8 @@
     [27.0, 'end', {}],
   ];
   R.CUTS = CUTS;
+  // hard cuts (seconds): motion blur must not straddle these
+  R.CUT_TIMES = CUTS.map((c) => b(c[0])).concat([b(5), b(31.5)]);
   const CH = { point: ['0D', 'point'], line: ['1D', 'line'], plane: ['2D', 'plane'], volume: ['3D', 'volume'], time: ['4D', 'time'], word: null };
 
   function cutAt(t) {
