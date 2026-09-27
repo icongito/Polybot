@@ -68,7 +68,7 @@
   <div class="bar">
     <div class="controls">
       <button class="play" id="play" type="button">Pause</button>
-      <span class="readout" id="readout">00:00:00 · bar 1.1</span>
+      <span class="readout" id="readout">00.00 s · bar 1.1 · frame 000</span>
     </div>
     <span class="keys">space play · ← → frame · [ ] beat</span>
   </div>
@@ -122,13 +122,14 @@
 
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const veil = document.getElementById('veil'), playBtn = document.getElementById('play'), readout = document.getElementById('readout');
-  let playing = !reduce, t = reduce ? R.b(14.4) : 0, last = performance.now(), slow = 0;
-  const pad = (n) => String(Math.floor(n)).padStart(2, '0');
+  let playing = !reduce, t = reduce ? R.b(14.4) : 0, last = performance.now(), slow = 0, shown = -1;
   function paint() {
+    if (t === shown) return;                 // paused and not scrubbed: nothing to redraw
+    shown = t;
     R.renderAt(t);
     const B = t / R.BEAT, beat = Math.floor(B + 1e-6);
     fill.style.width = head.style.left = (100 * t / R.DURATION) + '%';
-    readout.textContent = `${pad(t)}:${pad((t % 1) * 100)}:${pad(Math.floor(t * 60) % 60)} · bar ${Math.floor(beat / 4) + 1}.${beat % 4 + 1}`;
+    readout.textContent = `${t.toFixed(2).padStart(5, '0')} s · bar ${Math.floor(beat / 4) + 1}.${beat % 4 + 1} · frame ${String(Math.floor(t * 60)).padStart(3, '0')}`;
     segs.forEach((s, i) => s.classList.toggle('on', B >= CH[i][0] && B < CH[i][1]));
     tl.setAttribute('aria-valuenow', t.toFixed(2));
   }
@@ -138,7 +139,7 @@
       t = (t + dt) % R.DURATION;
       // adaptive resolution: step down when the device can't hold ~40 fps
       if (dt > 1 / 40) slow++; else slow = Math.max(0, slow - 1);
-      if (slow > 20 && scale > 0.5) { scale = Math.max(0.5, +(scale - 0.25).toFixed(2)); R.resize(scale); slow = 0; }
+      if (slow > 20 && scale > 0.5) { scale = Math.max(0.5, +(scale - 0.25).toFixed(2)); R.resize(scale); slow = 0; shown = -1; }
     }
     paint();
     requestAnimationFrame(frame);

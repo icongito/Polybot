@@ -11,6 +11,7 @@
   R.BEATS = 32;                   // 8 bars of 4/4
   R.DURATION = R.BEATS * R.BEAT;  // exactly 15.000 s
   R.b = (n) => n * R.BEAT;        // beat -> seconds
+  R.DOT0 = 23;                    // radius of the dot on the first and last frame (the loop point)
 
   // ---------------------------------------------------------------- math
   const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);

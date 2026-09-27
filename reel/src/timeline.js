@@ -30,11 +30,11 @@
     const B = t / R.BEAT;
     const impact = (bt, n = 2) => (t >= b(bt) && t < b(bt) + n / R.FPS ? 1 : 0);
     const ch = B < 5 ? 'point' : B < 9 ? 'line' : B < 12 ? 'plane' : B < 19 ? 'volume' : B < 23 ? 'time' : B < 27 ? 'climax' : 'end';
-    const base = { point: 0.0012, line: 0.0006, plane: 0.0007, volume: 0.001, time: 0.0028, climax: 0.0045, end: 0 }[ch];
+    const base = { point: 0.0012, line: 0.0006, plane: 0.0007, volume: 0.001, time: 0.0024, climax: 0.0028, end: 0 }[ch];
     const light = ch === 'line' || (ch === 'climax' && false);
     return {
-      ca: base + 0.016 * R.kick(t, 0.25, 12) + 0.008 * R.kick(t, 3, 10) + 0.012 * R.kick(t, 16, 9) + 0.01 * R.kick(t, 28, 12)
-        + (ch === 'climax' ? 0.006 * R.pb(t, 23, 27) : 0),
+      ca: base + 0.016 * R.kick(t, 0.25, 12) + 0.008 * R.kick(t, 3, 10) + 0.012 * R.kick(t, 16, 9) + 0.006 * R.kick(t, 28, 14)
+        + (ch === 'climax' ? 0.0025 * R.pb(t, 23, 27) : 0),
       invert: impact(0.25, 2) || impact(16, 1) || impact(26.99, 1),
       flash: [1, 1, 1, 0.9 * impact(21, 1)],
       bloom: ch === 'end' ? 0.35 : 0.55,
@@ -79,18 +79,19 @@
     p.zoom = 1 + 1.6 * zIn * (1 - zOut);
     p.focus = SP.center;
     p.zoomRot = -0.12 * zIn * (1 - zOut);
-    p.collapse = t < b(4) ? 1e5 : lerp(2300, -80, R.pb(t, 4, 4.7, E.inCubic));
+    p.collapse = t < b(4) ? 1e5 : lerp(1500, -80, R.pb(t, 4.05, 4.62, E.inOutSine));
 
     // protagonist
     let r, sq = [1, 1], glow = 0;
     const hit = b(0.25);
     if (t < hit) {
       const u = E.inCubic(inv(0, hit, t));
-      r = lerp(20, 27, u);
-      sq = [1 + 0.32 * u, 1 - 0.26 * u];
+      r = lerp(R.DOT0, R.DOT0 + 12, u);
+      sq = [1 + 0.42 * u, 1 - 0.34 * u];
+      glow = 0.9 * u;
     } else {
       const dt = t - hit;
-      r = lerp(27, SP.TIT_R, E.spring(dt * 1.15, 3.2, 7.5));
+      r = lerp(R.DOT0 + 12, SP.TIT_R, E.spring(dt * 1.15, 3.2, 7.5));
       const k = R.ring(t, 0.25, 3.4, 8);
       sq = [1 - 0.22 * k, 1 + 0.26 * k];
       glow = 1.6 * Math.exp(-dt * 7);

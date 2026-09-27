@@ -5,10 +5,10 @@
 (function (R) {
   'use strict';
   const G = R.glyphs;
-  const EM = 125;                       // the period (r = 0.16 em) is the 20px dot of frame 0
-  const DOT_R = 20;
+  const EM = 145;                       // the period (r = 0.16 em) is the dot of frame 0
+  const DOT_R = R.DOT0;
   const BASE2 = R.H / 2 + DOT_R;        // "made." sits so its full stop is the frame centre
-  const BASE1 = BASE2 - 1.95 * EM;
+  const BASE1 = BASE2 - 1.85 * EM;
   const W2 = G.layout('made').width * EM;
   const X0 = R.W / 2 - DOT_R - G.TRACK * EM - W2;
   let canvas, ctx, tex;
@@ -35,17 +35,17 @@
         G.drawWord(ctx, 'made', X0 + p.x2, BASE2, EM, fill);
       }
       if (p.caption > 0) {
-        ctx.font = R.fonts.mono(15, 500);
-        if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+        ctx.font = R.fonts.mono(17, 500);
+        if ('letterSpacing' in ctx) ctx.letterSpacing = '1.7px';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         const lines = p.captionLines || [];
-        const x0 = R.W / 2 + 76;
+        const x0 = R.W / 2 + 64;
         lines.forEach((ln, i) => {
           const k = R.clamp(p.caption * lines.length - i);
           if (k <= 0) return;
           ctx.fillStyle = R.rgba(i === 0 ? p.acc : p.fg, i === 0 ? 1 : 0.62);
-          ctx.fillText(ln.slice(0, Math.ceil(ln.length * k)), x0, BASE2 + i * 26);
+          ctx.fillText(ln.slice(0, Math.ceil(ln.length * k)), x0, BASE2 + i * 29);
         });
         if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
       }

@@ -158,17 +158,13 @@ vec3 calcNormal(vec3 p, float tau, int id, int sub){
 float softShadow(vec3 ro, vec3 rd, float tau){
   vec2 bh = boxHit(ro, rd);
   if (bh.y <= 0. || bh.x >= bh.y) return 1.;
-  float res = 1., t = max(bh.x, .012), ph = 1e10;
-  for (int i = 0; i < 28; i++) {
+  float res = 1., t = max(bh.x, .02);
+  for (int i = 0; i < 40; i++) {
     bool proxy;
     float h = mapS(ro + rd * t, tau, proxy);
-    if (!proxy) {
-      float y = h*h / (2.*ph); float dd = sqrt(max(h*h - y*y, 0.));
-      res = min(res, uShadowK * dd / max(0., t - y));
-      ph = h;
-    }
-    t += clamp(h, .015, .45);
-    if (res < .004 || t > bh.y) break;
+    if (!proxy) res = min(res, uShadowK * h / t);
+    t += clamp(h, .008, .3);
+    if (res < .003 || t > bh.y) break;
   }
   res = clamp(res, 0., 1.);
   return res * res * (3. - 2. * res);
@@ -227,7 +223,7 @@ vec3 render(vec2 px, float tau){
   vec3 Lp = dcl - p; float dl = max(length(Lp), 1e-4); Lp /= dl;
   // one shadow ray per pixel: toward the sun by day, toward the glowing dot by night
   bool wantSh = mod(uDbg, 2.) < .5 && (uSunOn > .5 || (uDotEmit > 0. && id != 2));
-  float shv = wantSh ? softShadow(p + n * .004, uSunOn > .5 ? L : Lp, tau) : 1.;
+  float shv = wantSh ? softShadow(p + n * .006, uSunOn > .5 ? L : Lp, tau) : 1.;
   float sh = uSunOn > .5 ? shv : 1.;
   float dif = max(dot(n, L), 0.) * sh;
   float ao = mod(floor(uDbg / 2.), 2.) < .5 ? calcAO(p, n, tau) : 1.;

@@ -11,7 +11,7 @@
   // part colour indices: 0 cream, 1 ink, 2 orange, 3 blue
   const COLS = {
     p: [1, 0], l: [0], a: [0, 0], n: [0, 0, 0], e: [0, 1],
-    v: [0], o: [0], u: [0, 0, 0], m: [0, 0, 1, 0, 0], t: [0, 0], i: [0],
+    v: [0], o: [0], u: [0, 0, 0], m: [0, 0, 0, 0, 0], t: [0, 0], i: [0],
   };
 
   // keyframe interpolation: ks = [[beat, value, easeToNext?], ...]
@@ -200,12 +200,14 @@
     const volTarget = [0, 0.75, 0];
     let cam;
     {
-      const tg = kf(t, [[12.0, [0, 0, -0.5]], [13.1, volTarget, E.whip], [14.9, [0.15, 0.7, 0]], [15.0, [LAY.volume[1].cx, 0.55, 0]], [16.0, [LAY.volume[1].cx, 0.55, 0], E.outCubic], [16.2, [0, 0.9, 0]], [18.2, [-0.1, 0.9, 0]], [19.0, [-0.1, 0.8, 0]]]);
-      const yaw = kf(t, [[12.0, 0], [13.1, -0.42, E.whip], [15.0, 0.22, E.inOutSine], [16.0, 0.3, E.outCubic], [16.2, 0.55], [18.0, -0.25, E.inOutSine], [19.0, 0.0, E.inOutCubic], [23, 0.12]]);
-      const pitch = kf(t, [[12.0, Math.PI / 2], [13.1, 0.22, E.whip], [15.0, 0.16], [16.0, 0.12], [16.2, 0.3], [18.0, 0.18], [19.0, 0.1], [23, 0.14]]);
-      // log-distance interpolation: 400 (ortho-like) -> close perspective
-      const ld = kf(t, [[12.0, Math.log(400)], [13.1, Math.log(9.5), E.whip], [15.0, Math.log(9.0)], [16.0, Math.log(2.1), E.inOutQuint], [16.2, Math.log(8.5), E.outExpo], [18.0, Math.log(9.5)], [19.0, Math.log(7.5)], [23, Math.log(6.2)]]);
-      const vh = kf(t, [[12.0, 3.8], [13.1, 4.4, E.whip], [15.0, 4.1], [16.0, 3.2, E.inOutQuint], [16.2, 4.3, E.outExpo], [18.0, 4.8], [19.0, 3.4], [23, 3.1]]);
+      const oc = LAY.volume[1].cx;
+      const tg = kf(t, [[12.0, [0, 0, -0.5]], [13.1, volTarget, E.whip], [14.6, [0.1, 0.72, 0]], [15.0, [oc, 0.5, 0], E.inOutCubic], [16.0, [oc, 0.5, 0]], [16.2, [0, 0.9, 0], E.outExpo], [18.2, [-0.1, 0.9, 0]], [19.0, [-0.1, 0.8, 0]]]);
+      const yaw = kf(t, [[12.0, 0], [13.1, -0.42, E.whip], [14.6, 0.05, E.inOutSine], [15.0, 0.18, E.inOutCubic], [16.0, 0.26], [16.2, 0.55, E.outExpo], [18.0, -0.25, E.inOutSine], [19.0, 0.0, E.inOutCubic], [23, 0.12]]);
+      const pitch = kf(t, [[12.0, Math.PI / 2], [13.1, 0.22, E.whip], [14.6, 0.17], [15.0, 0.1, E.inOutCubic], [16.0, 0.06], [16.2, 0.3, E.outExpo], [18.0, 0.18], [19.0, 0.1], [23, 0.14]]);
+      // log-distance: 400 (ortho-like) -> close perspective; b15..b16 is a vertigo move:
+      // the camera rushes in while the lens widens, the o holds its size, the world stretches
+      const ld = kf(t, [[12.0, Math.log(400)], [13.1, Math.log(9.5), E.whip], [14.6, Math.log(9.0)], [15.0, Math.log(14), E.inOutCubic], [16.0, Math.log(1.25), E.inOutSine], [16.2, Math.log(8.5), E.outExpo], [18.0, Math.log(9.5)], [19.0, Math.log(7.5)], [23, Math.log(6.2)]]);
+      const vh = kf(t, [[12.0, 3.8], [13.1, 4.4, E.whip], [14.6, 4.1], [15.0, 2.6, E.inOutCubic], [16.0, 2.6], [16.2, 4.3, E.outExpo], [18.0, 4.8], [19.0, 3.4], [23, 3.1]]);
       cam = R.orbitCam(tg, yaw, pitch, Math.exp(ld), vh, 0);
       st.camDist = Math.exp(ld);
     }
@@ -215,9 +217,9 @@
     const L = {};
     {
       const flatK = 1 - R.pb(t, 12.2, 13.1, E.inOutCubic);
-      const sweep = R.pb(t, 14.0, 15.2, E.inOutSine);
-      const az = lerp(-2.2, -0.6, sweep);
-      const el = lerp(0.75, 0.55, sweep);
+      const sweep = R.pb(t, 13.9, 15.4, E.inOutSine);
+      const az = lerp(-2.5, 0.15, sweep);
+      const el = lerp(0.62, 0.3, Math.sin(Math.PI * sweep) * 0.9 + sweep * 0.1);
       const sunVol = R.norm3([Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)]);
       const sunFlat = R.norm3([-0.42, 0.8, -0.3]);
       L.sun = R.norm3(mix3(sunVol, sunFlat, flatK));
@@ -242,7 +244,7 @@
       L.round = lerp(0.004, 0.035, 1 - flatK);
       st.dot.emit = night * lerp(0.2, 1.3, R.pb(t, 16.0, 16.4, E.outCubic));
       st.dot.glow = 0.12 + 0.25 * (1 - flatK) * (1 - night);
-      if (night > 0) st.pal[4] = mix3(st.pal[4], lin([0.09, 0.1, 0.35]), night);
+      if (night > 0) st.pal[4] = mix3(st.pal[4], lin([0.2, 0.21, 0.42]), night);
     }
     st.light = L;
 

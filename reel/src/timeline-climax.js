@@ -18,7 +18,7 @@
     [25.0, 'word', { word: 'type', bg: P.ink, fg: P.orange, w0: 25, w1: 151 }],
     [25.25, 'time', { src: 20.4 }],
     [25.5, 'word', { word: 'form', bg: P.blue, fg: P.paper, w0: 151, w1: 40 }],
-    [25.75, 'point', { src: 3.2, speed: 0.4, bg: P.ink, ink: P.paper }],
+    [25.75, 'point', { src: 3.2, speed: 0.4, bg: P.ink, ink: P.orange, acc: P.paper }],
     [26.0, 'line', { src: 8.1, speed: 1, paper: P.blue, ink: P.paper }],
     [26.125, 'word', { word: 'space', bg: P.ink, fg: P.paper, w0: 30, w1: 140 }],
     [26.25, 'volume', { src: 16.8, yaw: -0.6, pitch: 0.35, dist: 7, vh: 4.2 }],
@@ -130,7 +130,7 @@ void main(){
     }
     // one heartbeat before the loop re-detonates
     if (B >= 31.5) { const k = Math.sin(Math.PI * R.pb(t, 31.55, 31.95)); sq = [1 + 0.12 * k, 1 + 0.12 * k]; }
-    p.dot = [cx + Math.max(0, dx), cy, 20];
+    p.dot = [cx + Math.max(0, dx), cy, R.DOT0];
     p.squash = sq;
     return p;
   }

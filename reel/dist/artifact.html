@@ -62,7 +62,7 @@
   <div class="bar">
     <div class="controls">
       <button class="play" id="play" type="button">Pause</button>
-      <span class="readout" id="readout">00:00:00 · bar 1.1</span>
+      <span class="readout" id="readout">00.00 s · bar 1.1 · frame 000</span>
     </div>
     <span class="keys">space play · ← → frame · [ ] beat</span>
   </div>
@@ -82,6 +82,7 @@
   R.BEATS = 32;                   // 8 bars of 4/4
   R.DURATION = R.BEATS * R.BEAT;  // exactly 15.000 s
   R.b = (n) => n * R.BEAT;        // beat -> seconds
+  R.DOT0 = 23;                    // radius of the dot on the first and last frame (the loop point)
 
   // ---------------------------------------------------------------- math
   const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
@@ -369,16 +370,16 @@ void main(){ vec4 c = texture(uTex, vUv); fragColor = c * uAlpha; }`;
     o: { adv: 1, parts: [{ t: 'ring', c: [0.5, 0.5], r: 0.5 }] },
     l: { adv: W, parts: [{ t: 'box', c: [W / 2, 0.75], h: [W / 2, 0.75] }] },
     a: { adv: 1, parts: [{ t: 'ring', c: [0.5, 0.5], r: 0.5 }, { t: 'box', c: [1 - W / 2, 0.5], h: [W / 2, 0.5] }] },
-    n: { adv: 1, parts: [{ t: 'box', c: [W / 2, 0.5], h: [W / 2, 0.5] }, { t: 'arcU', c: [0.5, 0.5], r: 0.5 }, { t: 'box', c: [1 - W / 2, 0.25], h: [W / 2, 0.25] }] },
-    e: { adv: 1, parts: [{ t: 'gap', c: [0.5, 0.5], r: 0.5, a0: -60 * deg, a1: -21 * deg }, { t: 'box', c: [0.5, 0.5], h: [0.5 - W / 2, W / 2] }] },
+    n: { adv: 1, parts: [{ t: 'box', c: [W / 2, 0.5], h: [W / 2, 0.5] }, { t: 'arcU', c: [0.5, 0.5], r: 0.5 }, { t: 'box', c: [1 - W / 2, 0.28], h: [W / 2, 0.28] }] },
+    e: { adv: 1, parts: [{ t: 'gap', c: [0.5, 0.5], r: 0.5, a0: -60 * deg, a1: -21 * deg }, { t: 'box', c: [0.5, 0.5], h: [0.275, W / 2] }] },
     v: { adv: 1, parts: [{ t: 'vee', c: [0.5, 0.5] }] },
-    u: { adv: 1, parts: [{ t: 'box', c: [W / 2, 0.75], h: [W / 2, 0.25] }, { t: 'arcD', c: [0.5, 0.5], r: 0.5 }, { t: 'box', c: [1 - W / 2, 0.5], h: [W / 2, 0.5] }] },
+    u: { adv: 1, parts: [{ t: 'box', c: [W / 2, 0.72], h: [W / 2, 0.28] }, { t: 'arcD', c: [0.5, 0.5], r: 0.5 }, { t: 'box', c: [1 - W / 2, 0.5], h: [W / 2, 0.5] }] },
     m: { adv: 1.55, parts: [
-      { t: 'box', c: [W / 2, 0.275], h: [W / 2, 0.275] },
+      { t: 'box', c: [W / 2, 0.305], h: [W / 2, 0.305] },
       { t: 'arcU', c: [0.45, 0.55], r: 0.45 },
-      { t: 'box', c: [0.9 - W / 2, 0.275], h: [W / 2, 0.275] },
+      { t: 'box', c: [0.9 - W / 2, 0.305], h: [W / 2, 0.305] },
       { t: 'arcU', c: [1.1, 0.55], r: 0.45 },
-      { t: 'box', c: [1.55 - W / 2, 0.275], h: [W / 2, 0.275] }] },
+      { t: 'box', c: [1.55 - W / 2, 0.305], h: [W / 2, 0.305] }] },
     t: { adv: 0.66, parts: [{ t: 'box', c: [0.3, 0.68], h: [W / 2, 0.68] }, { t: 'box', c: [0.33, 1 - W / 2], h: [0.33, W / 2] }] },
     i: { adv: W, parts: [{ t: 'box', c: [W / 2, 0.5], h: [W / 2, 0.5] }], tittle: { c: [W / 2, TIT.y], r: TIT.r } },
     d: { adv: 1, parts: [{ t: 'ring', c: [0.5, 0.5], r: 0.5 }, { t: 'box', c: [1 - W / 2, 0.75], h: [W / 2, 0.75] }] },
@@ -1087,17 +1088,13 @@ vec3 calcNormal(vec3 p, float tau, int id, int sub){
 float softShadow(vec3 ro, vec3 rd, float tau){
   vec2 bh = boxHit(ro, rd);
   if (bh.y <= 0. || bh.x >= bh.y) return 1.;
-  float res = 1., t = max(bh.x, .012), ph = 1e10;
-  for (int i = 0; i < 28; i++) {
+  float res = 1., t = max(bh.x, .02);
+  for (int i = 0; i < 40; i++) {
     bool proxy;
     float h = mapS(ro + rd * t, tau, proxy);
-    if (!proxy) {
-      float y = h*h / (2.*ph); float dd = sqrt(max(h*h - y*y, 0.));
-      res = min(res, uShadowK * dd / max(0., t - y));
-      ph = h;
-    }
-    t += clamp(h, .015, .45);
-    if (res < .004 || t > bh.y) break;
+    if (!proxy) res = min(res, uShadowK * h / t);
+    t += clamp(h, .008, .3);
+    if (res < .003 || t > bh.y) break;
   }
   res = clamp(res, 0., 1.);
   return res * res * (3. - 2. * res);
@@ -1156,7 +1153,7 @@ vec3 render(vec2 px, float tau){
   vec3 Lp = dcl - p; float dl = max(length(Lp), 1e-4); Lp /= dl;
   // one shadow ray per pixel: toward the sun by day, toward the glowing dot by night
   bool wantSh = mod(uDbg, 2.) < .5 && (uSunOn > .5 || (uDotEmit > 0. && id != 2));
-  float shv = wantSh ? softShadow(p + n * .004, uSunOn > .5 ? L : Lp, tau) : 1.;
+  float shv = wantSh ? softShadow(p + n * .006, uSunOn > .5 ? L : Lp, tau) : 1.;
   float sh = uSunOn > .5 ? shv : 1.;
   float dif = max(dot(n, L), 0.) * sh;
   float ao = mod(floor(uDbg / 2.), 2.) < .5 ? calcAO(p, n, tau) : 1.;
@@ -1369,10 +1366,10 @@ void main(){
 (function (R) {
   'use strict';
   const G = R.glyphs;
-  const EM = 125;                       // the period (r = 0.16 em) is the 20px dot of frame 0
-  const DOT_R = 20;
+  const EM = 145;                       // the period (r = 0.16 em) is the dot of frame 0
+  const DOT_R = R.DOT0;
   const BASE2 = R.H / 2 + DOT_R;        // "made." sits so its full stop is the frame centre
-  const BASE1 = BASE2 - 1.95 * EM;
+  const BASE1 = BASE2 - 1.85 * EM;
   const W2 = G.layout('made').width * EM;
   const X0 = R.W / 2 - DOT_R - G.TRACK * EM - W2;
   let canvas, ctx, tex;
@@ -1399,17 +1396,17 @@ void main(){
         G.drawWord(ctx, 'made', X0 + p.x2, BASE2, EM, fill);
       }
       if (p.caption > 0) {
-        ctx.font = R.fonts.mono(15, 500);
-        if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+        ctx.font = R.fonts.mono(17, 500);
+        if ('letterSpacing' in ctx) ctx.letterSpacing = '1.7px';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         const lines = p.captionLines || [];
-        const x0 = R.W / 2 + 76;
+        const x0 = R.W / 2 + 64;
         lines.forEach((ln, i) => {
           const k = R.clamp(p.caption * lines.length - i);
           if (k <= 0) return;
           ctx.fillStyle = R.rgba(i === 0 ? p.acc : p.fg, i === 0 ? 1 : 0.62);
-          ctx.fillText(ln.slice(0, Math.ceil(ln.length * k)), x0, BASE2 + i * 26);
+          ctx.fillText(ln.slice(0, Math.ceil(ln.length * k)), x0, BASE2 + i * 29);
         });
         if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
       }
@@ -1529,11 +1526,11 @@ void main(){
     const B = t / R.BEAT;
     const impact = (bt, n = 2) => (t >= b(bt) && t < b(bt) + n / R.FPS ? 1 : 0);
     const ch = B < 5 ? 'point' : B < 9 ? 'line' : B < 12 ? 'plane' : B < 19 ? 'volume' : B < 23 ? 'time' : B < 27 ? 'climax' : 'end';
-    const base = { point: 0.0012, line: 0.0006, plane: 0.0007, volume: 0.001, time: 0.0028, climax: 0.0045, end: 0 }[ch];
+    const base = { point: 0.0012, line: 0.0006, plane: 0.0007, volume: 0.001, time: 0.0024, climax: 0.0028, end: 0 }[ch];
     const light = ch === 'line' || (ch === 'climax' && false);
     return {
-      ca: base + 0.016 * R.kick(t, 0.25, 12) + 0.008 * R.kick(t, 3, 10) + 0.012 * R.kick(t, 16, 9) + 0.01 * R.kick(t, 28, 12)
-        + (ch === 'climax' ? 0.006 * R.pb(t, 23, 27) : 0),
+      ca: base + 0.016 * R.kick(t, 0.25, 12) + 0.008 * R.kick(t, 3, 10) + 0.012 * R.kick(t, 16, 9) + 0.006 * R.kick(t, 28, 14)
+        + (ch === 'climax' ? 0.0025 * R.pb(t, 23, 27) : 0),
       invert: impact(0.25, 2) || impact(16, 1) || impact(26.99, 1),
       flash: [1, 1, 1, 0.9 * impact(21, 1)],
       bloom: ch === 'end' ? 0.35 : 0.55,
@@ -1578,18 +1575,19 @@ void main(){
     p.zoom = 1 + 1.6 * zIn * (1 - zOut);
     p.focus = SP.center;
     p.zoomRot = -0.12 * zIn * (1 - zOut);
-    p.collapse = t < b(4) ? 1e5 : lerp(2300, -80, R.pb(t, 4, 4.7, E.inCubic));
+    p.collapse = t < b(4) ? 1e5 : lerp(1500, -80, R.pb(t, 4.05, 4.62, E.inOutSine));
 
     // protagonist
     let r, sq = [1, 1], glow = 0;
     const hit = b(0.25);
     if (t < hit) {
       const u = E.inCubic(inv(0, hit, t));
-      r = lerp(20, 27, u);
-      sq = [1 + 0.32 * u, 1 - 0.26 * u];
+      r = lerp(R.DOT0, R.DOT0 + 12, u);
+      sq = [1 + 0.42 * u, 1 - 0.34 * u];
+      glow = 0.9 * u;
     } else {
       const dt = t - hit;
-      r = lerp(27, SP.TIT_R, E.spring(dt * 1.15, 3.2, 7.5));
+      r = lerp(R.DOT0 + 12, SP.TIT_R, E.spring(dt * 1.15, 3.2, 7.5));
       const k = R.ring(t, 0.25, 3.4, 8);
       sq = [1 - 0.22 * k, 1 + 0.26 * k];
       glow = 1.6 * Math.exp(-dt * 7);
@@ -1718,7 +1716,7 @@ void main(){
   // part colour indices: 0 cream, 1 ink, 2 orange, 3 blue
   const COLS = {
     p: [1, 0], l: [0], a: [0, 0], n: [0, 0, 0], e: [0, 1],
-    v: [0], o: [0], u: [0, 0, 0], m: [0, 0, 1, 0, 0], t: [0, 0], i: [0],
+    v: [0], o: [0], u: [0, 0, 0], m: [0, 0, 0, 0, 0], t: [0, 0], i: [0],
   };
 
   // keyframe interpolation: ks = [[beat, value, easeToNext?], ...]
@@ -1907,12 +1905,14 @@ void main(){
     const volTarget = [0, 0.75, 0];
     let cam;
     {
-      const tg = kf(t, [[12.0, [0, 0, -0.5]], [13.1, volTarget, E.whip], [14.9, [0.15, 0.7, 0]], [15.0, [LAY.volume[1].cx, 0.55, 0]], [16.0, [LAY.volume[1].cx, 0.55, 0], E.outCubic], [16.2, [0, 0.9, 0]], [18.2, [-0.1, 0.9, 0]], [19.0, [-0.1, 0.8, 0]]]);
-      const yaw = kf(t, [[12.0, 0], [13.1, -0.42, E.whip], [15.0, 0.22, E.inOutSine], [16.0, 0.3, E.outCubic], [16.2, 0.55], [18.0, -0.25, E.inOutSine], [19.0, 0.0, E.inOutCubic], [23, 0.12]]);
-      const pitch = kf(t, [[12.0, Math.PI / 2], [13.1, 0.22, E.whip], [15.0, 0.16], [16.0, 0.12], [16.2, 0.3], [18.0, 0.18], [19.0, 0.1], [23, 0.14]]);
-      // log-distance interpolation: 400 (ortho-like) -> close perspective
-      const ld = kf(t, [[12.0, Math.log(400)], [13.1, Math.log(9.5), E.whip], [15.0, Math.log(9.0)], [16.0, Math.log(2.1), E.inOutQuint], [16.2, Math.log(8.5), E.outExpo], [18.0, Math.log(9.5)], [19.0, Math.log(7.5)], [23, Math.log(6.2)]]);
-      const vh = kf(t, [[12.0, 3.8], [13.1, 4.4, E.whip], [15.0, 4.1], [16.0, 3.2, E.inOutQuint], [16.2, 4.3, E.outExpo], [18.0, 4.8], [19.0, 3.4], [23, 3.1]]);
+      const oc = LAY.volume[1].cx;
+      const tg = kf(t, [[12.0, [0, 0, -0.5]], [13.1, volTarget, E.whip], [14.6, [0.1, 0.72, 0]], [15.0, [oc, 0.5, 0], E.inOutCubic], [16.0, [oc, 0.5, 0]], [16.2, [0, 0.9, 0], E.outExpo], [18.2, [-0.1, 0.9, 0]], [19.0, [-0.1, 0.8, 0]]]);
+      const yaw = kf(t, [[12.0, 0], [13.1, -0.42, E.whip], [14.6, 0.05, E.inOutSine], [15.0, 0.18, E.inOutCubic], [16.0, 0.26], [16.2, 0.55, E.outExpo], [18.0, -0.25, E.inOutSine], [19.0, 0.0, E.inOutCubic], [23, 0.12]]);
+      const pitch = kf(t, [[12.0, Math.PI / 2], [13.1, 0.22, E.whip], [14.6, 0.17], [15.0, 0.1, E.inOutCubic], [16.0, 0.06], [16.2, 0.3, E.outExpo], [18.0, 0.18], [19.0, 0.1], [23, 0.14]]);
+      // log-distance: 400 (ortho-like) -> close perspective; b15..b16 is a vertigo move:
+      // the camera rushes in while the lens widens, the o holds its size, the world stretches
+      const ld = kf(t, [[12.0, Math.log(400)], [13.1, Math.log(9.5), E.whip], [14.6, Math.log(9.0)], [15.0, Math.log(14), E.inOutCubic], [16.0, Math.log(1.25), E.inOutSine], [16.2, Math.log(8.5), E.outExpo], [18.0, Math.log(9.5)], [19.0, Math.log(7.5)], [23, Math.log(6.2)]]);
+      const vh = kf(t, [[12.0, 3.8], [13.1, 4.4, E.whip], [14.6, 4.1], [15.0, 2.6, E.inOutCubic], [16.0, 2.6], [16.2, 4.3, E.outExpo], [18.0, 4.8], [19.0, 3.4], [23, 3.1]]);
       cam = R.orbitCam(tg, yaw, pitch, Math.exp(ld), vh, 0);
       st.camDist = Math.exp(ld);
     }
@@ -1922,9 +1922,9 @@ void main(){
     const L = {};
     {
       const flatK = 1 - R.pb(t, 12.2, 13.1, E.inOutCubic);
-      const sweep = R.pb(t, 14.0, 15.2, E.inOutSine);
-      const az = lerp(-2.2, -0.6, sweep);
-      const el = lerp(0.75, 0.55, sweep);
+      const sweep = R.pb(t, 13.9, 15.4, E.inOutSine);
+      const az = lerp(-2.5, 0.15, sweep);
+      const el = lerp(0.62, 0.3, Math.sin(Math.PI * sweep) * 0.9 + sweep * 0.1);
       const sunVol = R.norm3([Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)]);
       const sunFlat = R.norm3([-0.42, 0.8, -0.3]);
       L.sun = R.norm3(mix3(sunVol, sunFlat, flatK));
@@ -1949,7 +1949,7 @@ void main(){
       L.round = lerp(0.004, 0.035, 1 - flatK);
       st.dot.emit = night * lerp(0.2, 1.3, R.pb(t, 16.0, 16.4, E.outCubic));
       st.dot.glow = 0.12 + 0.25 * (1 - flatK) * (1 - night);
-      if (night > 0) st.pal[4] = mix3(st.pal[4], lin([0.09, 0.1, 0.35]), night);
+      if (night > 0) st.pal[4] = mix3(st.pal[4], lin([0.2, 0.21, 0.42]), night);
     }
     st.light = L;
 
@@ -1988,21 +1988,23 @@ void main(){
   const lin = (c) => c.map((v) => Math.pow(v, 2.2));
 
   // [beat, kind, opts]
+  // Fast cuts stay in a dark-to-mid luminance band (blue <-> ink is under a 10%
+  // relative-luminance swing); colour lives in the content, not full-frame flashes.
   const CUTS = [
     [23.0, 'point', { src: 1.55, speed: 0.6, bg: P.blue, ink: P.paper, zoom: 1.35 }],
     [23.5, 'line', { src: 5.45, speed: 2.1, paper: P.ink, ink: P.paper }],
-    [24.0, 'plane', { src: 9.95, floor: P.ink }],
+    [24.0, 'plane', { src: 9.95, floor: P.orange, disc: P.blue }],
     [24.5, 'volume', { src: 14.4, yaw: 0.75, pitch: 0.05, dist: 5.5, vh: 3.3 }],
-    [25.0, 'word', { word: 'type', bg: P.orange, fg: P.ink, w0: 25, w1: 151 }],
+    [25.0, 'word', { word: 'type', bg: P.ink, fg: P.orange, w0: 25, w1: 151 }],
     [25.25, 'time', { src: 20.4 }],
-    [25.5, 'word', { word: 'form', bg: P.paper, fg: P.blue, w0: 151, w1: 40 }],
-    [25.75, 'point', { src: 3.2, speed: 0.4, bg: P.orange, ink: P.ink, acc: P.paper }],
+    [25.5, 'word', { word: 'form', bg: P.blue, fg: P.paper, w0: 151, w1: 40 }],
+    [25.75, 'point', { src: 3.2, speed: 0.4, bg: P.ink, ink: P.orange, acc: P.paper }],
     [26.0, 'line', { src: 8.1, speed: 1, paper: P.blue, ink: P.paper }],
     [26.125, 'word', { word: 'space', bg: P.ink, fg: P.paper, w0: 30, w1: 140 }],
     [26.25, 'volume', { src: 16.8, yaw: -0.6, pitch: 0.35, dist: 7, vh: 4.2 }],
     [26.375, 'word', { word: 'light', bg: P.blue, fg: P.orange, w0: 151, w1: 25 }],
-    [26.5, 'plane', { src: 10.8, floor: P.orange, disc: P.blue }],
-    [26.625, 'word', { word: 'rhythm', bg: P.paper, fg: P.ink, w0: 25, w1: 120 }],
+    [26.5, 'plane', { src: 10.8, floor: P.ink }],
+    [26.625, 'word', { word: 'rhythm', bg: P.ink, fg: P.orange, w0: 25, w1: 120 }],
     [26.75, 'time', { src: 22.7 }],
     [26.875, 'point', { src: 0.55, speed: 0.5 }],
     [27.0, 'end', {}],
@@ -2108,7 +2110,7 @@ void main(){
     }
     // one heartbeat before the loop re-detonates
     if (B >= 31.5) { const k = Math.sin(Math.PI * R.pb(t, 31.55, 31.95)); sq = [1 + 0.12 * k, 1 + 0.12 * k]; }
-    p.dot = [cx + Math.max(0, dx), cy, 20];
+    p.dot = [cx + Math.max(0, dx), cy, R.DOT0];
     p.squash = sq;
     return p;
   }
@@ -2218,13 +2220,14 @@ void main(){
 
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const veil = document.getElementById('veil'), playBtn = document.getElementById('play'), readout = document.getElementById('readout');
-  let playing = !reduce, t = reduce ? R.b(14.4) : 0, last = performance.now(), slow = 0;
-  const pad = (n) => String(Math.floor(n)).padStart(2, '0');
+  let playing = !reduce, t = reduce ? R.b(14.4) : 0, last = performance.now(), slow = 0, shown = -1;
   function paint() {
+    if (t === shown) return;                 // paused and not scrubbed: nothing to redraw
+    shown = t;
     R.renderAt(t);
     const B = t / R.BEAT, beat = Math.floor(B + 1e-6);
     fill.style.width = head.style.left = (100 * t / R.DURATION) + '%';
-    readout.textContent = `${pad(t)}:${pad((t % 1) * 100)}:${pad(Math.floor(t * 60) % 60)} · bar ${Math.floor(beat / 4) + 1}.${beat % 4 + 1}`;
+    readout.textContent = `${t.toFixed(2).padStart(5, '0')} s · bar ${Math.floor(beat / 4) + 1}.${beat % 4 + 1} · frame ${String(Math.floor(t * 60)).padStart(3, '0')}`;
     segs.forEach((s, i) => s.classList.toggle('on', B >= CH[i][0] && B < CH[i][1]));
     tl.setAttribute('aria-valuenow', t.toFixed(2));
   }
@@ -2234,7 +2237,7 @@ void main(){
       t = (t + dt) % R.DURATION;
       // adaptive resolution: step down when the device can't hold ~40 fps
       if (dt > 1 / 40) slow++; else slow = Math.max(0, slow - 1);
-      if (slow > 20 && scale > 0.5) { scale = Math.max(0.5, +(scale - 0.25).toFixed(2)); R.resize(scale); slow = 0; }
+      if (slow > 20 && scale > 0.5) { scale = Math.max(0.5, +(scale - 0.25).toFixed(2)); R.resize(scale); slow = 0; shown = -1; }
     }
     paint();
     requestAnimationFrame(frame);
