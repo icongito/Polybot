@@ -2,3 +2,4 @@ node_modules/
 out/preview*
 out/shots/
 out/segments/
+out/*.log

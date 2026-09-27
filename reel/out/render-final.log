@@ -1,6 +1,0 @@
-segment 0: beats 0-5
-[page] [.WebGL-0x1ebc00124e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
-[page] [.WebGL-0x1ebc00124e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
-[page] [.WebGL-0x1ebc00124e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
-[page] [.WebGL-0x1ebc00124e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
-frame 29 (30/141)  62s elapsed, ~231s left
