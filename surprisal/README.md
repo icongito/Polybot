@@ -46,7 +46,7 @@ Append `?t=22.5` to freeze on a single moment.
 
 ```sh
 cd surprisal
-FFMPEG=/path/to/ffmpeg node render.mjs            # -> surprisal.mp4 and soundtrack.m4a (~25 min on 4 cores)
+FFMPEG=/path/to/ffmpeg node render.mjs            # -> surprisal.mp4 and soundtrack.mp3 (~25 min on 4 cores)
 node render.mjs --stills 3.3,15.9,23.5,38.8       # -> stills/*.png
 node render.mjs --audio                           # -> audio.wav
 ```

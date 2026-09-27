@@ -112,7 +112,7 @@ try {
     fs.writeFileSync(list, segs.filter(Boolean).map(s => `file '${s}'`).join('\n'));
     await run(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-ss', String(FROM), '-t', String(TO - FROM), '-i', audio,
       '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k', '-shortest', '-movflags', '+faststart', OUT]);
-    await run(FFMPEG, ['-y', '-loglevel', 'error', '-i', audio, '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', path.join(ROOT, 'soundtrack.m4a')]);
+    await run(FFMPEG, ['-y', '-loglevel', 'error', '-i', audio, '-c:a', 'libmp3lame', '-b:a', '192k', path.join(ROOT, 'soundtrack.mp3')]);
     console.log(`wrote ${OUT} in ${((Date.now() - started) / 1000).toFixed(0)}s`);
   }
 } finally {

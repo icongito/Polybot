@@ -1241,7 +1241,7 @@ go.addEventListener('click', async () => {
   await actx.resume();
   // the score is the same for every sample, so play the pre-rendered one if it is here
   let buf = null;
-  try { const r = await fetch('soundtrack.m4a'); if (r.ok) buf = await actx.decodeAudioData(await r.arrayBuffer()); } catch (e) { buf = null; }
+  try { const r = await fetch('soundtrack.mp3'); if (r.ok) buf = await actx.decodeAudioData(await r.arrayBuffer()); } catch (e) { buf = null; }
   if (!buf) buf = await renderAudio(SEED);
   src = actx.createBufferSource(); src.buffer = buf; src.connect(actx.destination);
   ui.classList.add('gone');
