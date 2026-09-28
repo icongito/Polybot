@@ -1,13 +1,14 @@
-// Soundtrack synthesizer: 120 BPM, A minor, 30s. Writes a 48k stereo float WAV.
+// Soundtrack synthesizer, A minor. The score is written in 120 BPM "score seconds" (30s);
+// TS stretches event timing to 96 BPM / 37.5s while envelopes keep their natural length.
 // usage: node synth.js out.wav
 const fs = require('fs');
-const SR = 48000, DUR = 30, N = SR * DUR, BEAT = 0.5;
+const TS = 1.25, SR = 48000, DUR = 30, N = Math.round(SR * DUR * TS), BEAT = 0.5;
 const L = new Float32Array(N), R = new Float32Array(N);
 const padL = new Float32Array(N), padR = new Float32Array(N);
 const revS = new Float32Array(N), dlyS = new Float32Array(N);
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 let seed = 12345; const noise = () => { seed = (seed * 16807) % 2147483647; return seed / 1073741823.5 - 1; };
-const idx = t => Math.round(t * SR);
+const idx = t => Math.round(t * TS * SR);
 function out(i, v, pan = 0, rv = 0, dl = 0) {
   if (i < 0 || i >= N) return;
   const a = (pan + 1) * Math.PI / 4; L[i] += v * Math.cos(a); R[i] += v * Math.sin(a);
@@ -58,10 +59,10 @@ for (let t = 10; t < 24; t += 0.125) { if (Math.abs((t * 4) % 2 - 1) < 1e-6) hat
   notes.push([26, 33, 1.6]); notes.push([28, 29, 1.6]);
   const buf = new Float32Array(N);
   for (const [t0, m, d] of notes) { const i0 = idx(t0), fr = mtof(m), dt = fr / SR; ph = 0; ph2 = 0;
-    for (let j = 0; j < SR * (d + 0.08); j++) { const t = j / SR; ph = (ph + dt) % 1; ph2 += 2 * Math.PI * fr / SR;
+    for (let j = 0; j < SR * (d * TS + 0.08); j++) { const t = j / SR / TS; ph = (ph + dt) % 1; ph2 += 2 * Math.PI * fr / SR;
       const env = Math.min(1, t / 0.003) * (t < d ? 1 : Math.exp(-(t - d) / 0.02));
       buf[i0 + j] += ((2 * ph - 1 - blep(ph, dt)) * 0.55 + Math.sin(ph2) * 0.65) * env; } }
-  let ne = 0; for (let i = 0; i < N; i++) { const t = i / SR; // cutoff envelope retriggered on each 8th offbeat
+  for (let i = 0; i < N; i++) { const t = i / SR / TS; // cutoff envelope retriggered on each 8th offbeat
     const lt = ((t - 0.25) % 0.5 + 0.5) % 0.5; const fc = 160 + 1100 * Math.exp(-lt / 0.07);
     out(i, f(buf[i], fc, 1.1, 0) * 0.34 * SC[i]); } }
 
@@ -69,12 +70,12 @@ for (let t = 10; t < 24; t += 0.125) { if (Math.abs((t * 4) % 2 - 1) < 1e-6) hat
 { for (let b = 0; b < BARS.length; b++) { const ch = CH[BARS[b]], t0 = b * 2, t1 = t0 + 2; const stab = b === 13;
     for (const m of ch) for (const [det, pan] of [[-0.11, -0.8], [0, 0], [0.12, 0.8]]) {
       const fr = mtof(m + det), dt = fr / SR; let ph = (noise() + 1) / 2;
-      for (let i = idx(t0) - SR * 0.02; i < Math.min(N, idx(t1) + SR * 0.25); i++) { if (i < 0) continue; const t = i / SR;
+      for (let i = idx(t0) - SR * 0.02; i < Math.min(N, idx(t1) + SR * 0.25); i++) { if (i < 0) continue; const t = i / SR / TS;
         ph = (ph + dt) % 1; const s = 2 * ph - 1 - blep(ph, dt);
         const env = Math.min(1, (t - t0 + 0.02) / 0.03) * (t < t1 ? 1 : Math.exp(-(t - t1) / 0.08)) * (stab ? 0.6 + 0.9 * Math.exp(-(t - t0) / 0.5) : 1);
         const a = (pan + 1) * Math.PI / 4; padL[i] += s * env * Math.cos(a); padR[i] += s * env * Math.sin(a); } } }
   const fl = svf(), fr_ = svf();
-  for (let i = 0; i < N; i++) { const t = i / SR;
+  for (let i = 0; i < N; i++) { const t = i / SR / TS;
     let fc = 1500; if (t < 2) fc = 250 + 900 * (t / 2) ** 2; else if (t >= 24 && t < 26) fc = 900 + 7000 * ((t - 24) / 2) ** 2.2; else if (t >= 26) fc = 3200 - 1900 * Math.min(1, (t - 26) / 3);
     let g = 0.05; if (t < 2) g = 0.05 * Math.min(1, t / 1.2); if (t >= 29.2) g *= Math.max(0, 1 - (t - 29.2) / 0.7);
     const sc = t < 2 ? 1 : SC[i]; const l = fl(padL[i], fc, 0.9, 0) * g * sc, r = fr_(padR[i], fc, 0.9, 0) * g * sc;
@@ -100,7 +101,7 @@ bell(1.5, 88, 0.2, 0); thud(1.5, 0.3);
 bell(29.38, 81, 0.22, 0, 0.6); bell(29.62, 93, 0.1, 0, 0.6);
 
 // ── whooshes / risers / impact
-function sweep(t0, d, f0, f1, amp, rising = true, pan0 = -0.6, pan1 = 0.6) { const i0 = idx(t0), f = svf(); for (let j = 0; j < SR * d; j++) { const k = j / (SR * d);
+function sweep(t0, d, f0, f1, amp, rising = true, pan0 = -0.6, pan1 = 0.6) { const i0 = idx(t0), f = svf(); for (let j = 0; j < SR * d * TS; j++) { const k = j / (SR * d * TS);
   const fc = f0 * Math.pow(f1 / f0, k), env = rising ? Math.pow(k, 2) * (1 - Math.pow(k, 40)) : Math.pow(1 - k, 2) * Math.min(1, k * 30);
   out(i0 + j, f(noise(), fc, 2.2, 1) * env * amp, lerp(pan0, pan1, k), 0.15); } }
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -109,7 +110,7 @@ crash(2.0, 0.16);
 for (const c of [4, 6, 8, 10, 12, 14, 16, 18, 22, 24]) sweep(c - 0.3, 0.3, 500, 4000, 0.22, true, c % 4 ? -0.5 : 0.5, c % 4 ? 0.5 : -0.5);
 for (const c of [20, 20.5, 21, 21.5]) sweep(c, 0.3, 5000, 600, 0.45, false, c % 1 ? 0.6 : -0.6, c % 1 ? -0.6 : 0.6);
 sweep(24, 1.93, 250, 9000, 0.8);                      // build riser
-{ const i0 = idx(24); let ph = 0; for (let j = 0; j < SR * 1.93; j++) { const k = j / (SR * 1.93); const fr = 110 * Math.pow(8, k); ph = (ph + fr / SR) % 1; out(i0 + j, (2 * ph - 1) * 0.07 * k, 0, 0.3); } }
+{ const i0 = idx(24); let ph = 0; for (let j = 0; j < SR * 1.93 * TS; j++) { const k = j / (SR * 1.93 * TS); const fr = 110 * Math.pow(8, k); ph = (ph + fr / SR) % 1; out(i0 + j, (2 * ph - 1) * 0.07 * k, 0, 0.3); } }
 // impact at 26
 { const i0 = idx(26); let ph = 0; const f = svf(); for (let j = 0; j < SR * 2.5; j++) { const t = j / SR; ph += 2 * Math.PI * (32 + 70 * Math.exp(-t / 0.35)) / SR;
     out(i0 + j, Math.tanh(1.5 * Math.sin(ph)) * Math.exp(-t / 0.9) * 0.5 + f(noise(), 900, 0.7, 0) * Math.exp(-t / 0.25) * 0.5, 0, 0.35); } }
@@ -134,7 +135,7 @@ for (let i = idx(25.94); i < idx(26); i++) { L[i] *= 0.15; R[i] *= 0.15; revS[i]
   const rl = run(0), rr = run(23); for (let i = 0; i < N; i++) { L[i] += rl[i] * 0.9; R[i] += rr[i] * 0.9; } }
 
 // ── master: DC block, gentle saturation, end fade
-{ let xl = 0, yl = 0, xr = 0, yr = 0; for (let i = 0; i < N; i++) { const t = i / SR;
+{ let xl = 0, yl = 0, xr = 0, yr = 0; for (let i = 0; i < N; i++) { const t = i / SR / TS;
     yl = L[i] - xl + 0.9995 * yl; xl = L[i]; yr = R[i] - xr + 0.9995 * yr; xr = R[i];
     const fade = t > 29.75 ? Math.max(0, 1 - (t - 29.75) / 0.25) : 1;
     L[i] = Math.tanh(yl * 1.1) * fade; R[i] = Math.tanh(yr * 1.1) * fade; } }

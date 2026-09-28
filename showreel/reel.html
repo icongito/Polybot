@@ -15,8 +15,9 @@ canvas{display:block}
 <body>
 <canvas id="c" width="1920" height="1080"></canvas>
 <script>
-// Every frame is a pure function of t (seconds). 120 BPM, cuts on downbeats.
-const W=1920,H=1080,FPS=60,DUR=30,BEAT=0.5;
+// Every frame is a pure function of time. Scenes are authored in 120 BPM score-seconds (30s);
+// render(T) takes real seconds and plays the score at 96 BPM (TS=1.25, 37.5s).
+const W=1920,H=1080,FPS=60,TS=1.25,DUR=30*TS,BEAT=0.5;
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 const COL={ink:'#0B0B10',paper:'#F2EEE4',red:'#FF4A26',blue:'#2F4BFF',lime:'#D6FF3E',pink:'#FF8FD0',violet:'#8A6BFF'};
 const RGB=Object.fromEntries(Object.entries(COL).map(([k,v])=>{const n=parseInt(v.slice(1),16);return[k,[n>>16,n>>8&255,n&255]]}));
@@ -173,12 +174,12 @@ function initParticles(){const oc=document.createElement('canvas');oc.width=W;oc
   PART=[...Array(NPART)].map((_,i)=>{const p=pts[i%pts.length],u=(p[0]-minx)/(maxx-minx),g=u*(grad.length-1),gi=Math.min(grad.length-2,Math.floor(g));
     return{tx:p[0]+(r()-.5)*3,ty:p[1]+(r()-.5)*3,th:r()*Math.PI*2,rad:120+Math.sqrt(r())*820,w:(0.6+r()*0.9)*(r()<0.85?1:-1),s:r(),ph:r()*6.28,bucket:Math.min(5,Math.floor(u*6)),col:mixRGB(grad[gi],grad[gi+1],g-gi)}});
   PART.buckets=[...Array(6)].map((_,b)=>{const u=(b+0.5)/6,g=u*(grad.length-1),gi=Math.min(grad.length-2,Math.floor(g));return mixRGB(grad[gi],grad[gi+1],g-gi)})}
-function partPos(p,lt){const ex=E.outExpo(prog(lt,0,0.55));const a=p.th+p.w*lt*1.3+0.3*Math.sin(lt*2+p.ph);const rr=p.rad*ex*(1+0.08*Math.sin(lt*3+p.ph));
+function partPos(p,lt){const ex=E.outC(prog(lt,0,0.8));const a=p.th+p.w*lt*1.3+0.3*Math.sin(lt*2+p.ph);const rr=p.rad*ex*(1+0.08*Math.sin(lt*3+p.ph));
   let x=W/2+Math.cos(a)*rr*1.55,y=H/2+Math.sin(a)*rr*0.85;
   const c=E.ioC(prog(lt,0.35+p.s*0.28,0.78+p.s*0.28));x=lerp(x,p.tx+Math.sin(lt*9+p.ph)*1.2,c);y=lerp(y,p.ty+Math.cos(lt*8+p.ph)*1.2,c);
   const d=E.inExpo(prog(lt,1.6+p.s*0.12,1.96));const ca=d*2.5,dx=x-W/2,dy=y-H/2;x=W/2+(dx*Math.cos(ca)-dy*Math.sin(ca))*(1-d);y=H/2+(dx*Math.sin(ca)+dy*Math.cos(ca))*(1-d);return[x,y]}
 function sParticles(t){
-  const lt=t-10;bg(COL.ink);ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';ctx.lineWidth=3.4;
+  const lt=t-10;bg(COL.ink);ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=E.inQ(prog(lt,0,0.4));ctx.lineCap='round';ctx.lineWidth=3.4;
   const paths=[...Array(6)].map(()=>new Path2D());
   for(const p of PART){const[a,b]=partPos(p,lt-1/75),[x,y]=partPos(p,lt);const P=paths[p.bucket];P.moveTo(a,b);P.lineTo(x+0.01,y)}
   paths.forEach((P,b)=>{ctx.strokeStyle=PART.buckets[b];ctx.stroke(P)});ctx.restore();
@@ -306,25 +307,23 @@ function sIso(t){
 
 // ───────────────────────── 12 BUILD-UP
 function sTunnel(t){
-  const lt=t-24;bg(COL.ink);const N=34,travel=3*lt+5.5*lt*lt,pal=[COL.red,COL.paper,COL.blue,COL.lime,COL.pink];
-  const sh=4*prog(lt,1.0,1.9);ctx.save();ctx.translate(Math.sin(lt*130)*sh,Math.cos(lt*110)*sh);
+  const lt=t-24;bg(COL.ink);const N=24,travel=1.8*lt+1.6*lt*lt,pal=[COL.red,COL.paper,COL.blue,COL.lime,COL.pink];
+  const fade=1-E.inC(prog(lt,1.55,2.0));ctx.save();
   const rings=[];for(let k=0;k<N;k++){const s=((k+travel)%N)/N;rings.push([s,k])}rings.sort((a,b)=>a[0]-b[0]);
-  for(const[s,k]of rings){const size=14*Math.exp(s*5.4),rot=k*0.19+lt*(0.8+lt*0.9);const kk=Math.floor(k+travel*0)%5;
-    ctx.save();ctx.translate(W/2,H/2);ctx.rotate(rot);ctx.globalAlpha=clamp(s*5);ctx.fillStyle=pal[k%5];ctx.beginPath();ctx.rect(-size/2,-size/2,size,size);ctx.rect(-size*0.46,-size*0.46,size*0.92,size*0.92);ctx.fill('evenodd');ctx.restore()}
+  for(const[s,k]of rings){const size=14*Math.exp(s*5.4),rot=k*0.16+lt*(0.45+lt*0.25);const kk=Math.floor(k+travel*0)%5;
+    ctx.save();ctx.translate(W/2,H/2);ctx.rotate(rot);ctx.globalAlpha=clamp(s*5)*fade;ctx.fillStyle=pal[k%5];ctx.beginPath();ctx.rect(-size/2,-size/2,size,size);ctx.rect(-size*0.475,-size*0.475,size*0.95,size*0.95);ctx.fill('evenodd');ctx.restore()}
   ctx.globalAlpha=1;
   const n=4-clamp(Math.floor(lt/0.5),0,3),bl=lt%0.5,pk=E.outExpo(prog(bl,0,0.3));
   ctx.fillStyle=COL.ink;circle(W/2,H/2,150*lerp(0.6,1,pk));ctx.fill();
-  ctx.save();ctx.translate(W/2,H/2);ctx.scale(lerp(1.7,1,pk),lerp(1.7,1,pk));ctx.font=font(800,190,'Syne');ctx.textAlign='center';ctx.fillStyle=COL.paper;ctx.fillText(String(n),0,190*0.36);ctx.restore();
+  ctx.save();ctx.globalAlpha=fade;ctx.translate(W/2,H/2);ctx.scale(lerp(1.35,1,pk),lerp(1.35,1,pk));ctx.font=font(800,190,'Syne');ctx.textAlign='center';ctx.fillStyle=COL.paper;ctx.fillText(String(n),0,190*0.36);ctx.restore();
   ctx.restore();
-  if(lt>1.5&&lt<1.8&&Math.floor(lt*16)%2===0){ctx.fillStyle=hexA(COL.paper,0.08);ctx.fillRect(0,0,W,H)}
-  const fl=E.inExpo(prog(lt,1.75,2.0));if(fl>0){ctx.fillStyle=hexA(COL.paper,fl);ctx.fillRect(0,0,W,H)}
 }
 
 // ───────────────────────── END CARD
 function sOutro(t){
   const lt=t-26;bg(COL.ink);
   const col=E.ioExpo(prog(lt,3.05,3.45)),cs=Math.max(0.0001,1-col);
-  ctx.save();const sh=16*Math.exp(-lt/0.16);ctx.translate(Math.sin(lt*97)*sh,Math.cos(lt*83)*sh);
+  ctx.save();const sh=5*Math.exp(-lt/0.25);ctx.translate(Math.sin(lt*38)*sh,Math.cos(lt*31)*sh);
   ctx.translate(W/2,H/2);ctx.scale(cs,cs);ctx.translate(-W/2,-H/2);
   const ring=E.outExpo(prog(lt,0.3,1.4));for(let k=0;k<72;k++){const a=k/72*Math.PI*2+lt*0.25;ctx.fillStyle=hexA(COL.paper,0.18*ring);circle(W/2+Math.cos(a)*760*ring,H/2-40+Math.sin(a)*380*ring,k%6?2:4);ctx.fill()}
   const size=fitSize('CLAUDE',800,'Syne',1360,290),f=font(800,size,'Syne'),base=H/2+size*0.36-70;
@@ -341,18 +340,17 @@ function sOutro(t){
   if(hud>0){ctx.save();ctx.globalAlpha=hud;ctx.font=font(500,19,'JetBrains Mono');ctx.fillStyle=COL.paper;ctx.textAlign='left';ctx.fillText('CLAUDE / MOTION REEL ’26',84,84);
     ctx.textAlign='right';ctx.fillText('AVAILABLE FOR WORK',W-84,84);ctx.fillStyle=COL.lime;circle(W-84-ctx.measureText('AVAILABLE FOR WORK').width-22,78,7+3*kickPulse(t));ctx.fill();cropMarks(COL.paper);ctx.restore()}
   const dot=E.outBack(prog(lt,3.36,3.52))*(1-E.inExpo(prog(lt,3.6,3.72)));if(dot>0){ctx.fillStyle=COL.paper;circle(W/2,H/2,54*dot*(1+0.25*Math.sin(prog(lt,3.52,3.6)*Math.PI)));ctx.fill()}
-  const fl=1-E.outC(prog(lt,0,0.5));if(fl>0){ctx.fillStyle=hexA(COL.paper,fl);ctx.fillRect(0,0,W,H)}
 }
 
 // ───────────────────────── HUD / FINISHING
 function cropMarks(col){ctx.strokeStyle=col;ctx.lineWidth=2;const m=44,L=24;for(const[x,y,dx,dy]of[[m,m,1,1],[W-m,m,-1,1],[m,H-m,1,-1],[W-m,H-m,-1,-1]]){ctx.beginPath();ctx.moveTo(x,y+dy*L);ctx.lineTo(x,y);ctx.lineTo(x+dx*L,y);ctx.stroke()}}
-function drawHUD(t,sc){const col=typeof sc.hud==='function'?sc.hud(t):sc.hud;const lt=t-sc.a;ctx.save();ctx.globalAlpha=0.9;cropMarks(col);ctx.fillStyle=col;ctx.font=font(500,19,'JetBrains Mono');
+function drawHUD(t,sc,T){const col=typeof sc.hud==='function'?sc.hud(t):sc.hud;const lt=t-sc.a;ctx.save();ctx.globalAlpha=0.9;cropMarks(col);ctx.fillStyle=col;ctx.font=font(500,19,'JetBrains Mono');
   const label=`${sc.id} — ${sc.name}`,n=Math.floor(clamp(lt/0.28)*label.length);ctx.textAlign='left';ctx.fillText(label.slice(0,n),84,84);
-  if(lt<0.5&&Math.floor(lt*14)%2===0){ctx.font=font(500,19,'JetBrains Mono');ctx.fillRect(84+ctx.measureText(label.slice(0,n)).width+4,69,11,19)}
+  if(lt<0.6&&Math.floor(lt*4)%2===0){ctx.font=font(500,19,'JetBrains Mono');ctx.fillRect(84+ctx.measureText(label.slice(0,n)).width+4,69,11,19)}
   ctx.textAlign='right';ctx.fillText('CLAUDE — MOTION REEL ’26',W-84,84);
-  const fr=Math.round(t*FPS),ss=Math.floor(fr/FPS),ff=fr%FPS;ctx.textAlign='left';ctx.fillText(`TC 00:00:${String(ss).padStart(2,'0')}:${String(ff).padStart(2,'0')}`,84,H-70);
+  const fr=Math.round(T*FPS),ss=Math.floor(fr/FPS),ff=fr%FPS;ctx.textAlign='left';ctx.fillText(`TC 00:00:${String(ss).padStart(2,'0')}:${String(ff).padStart(2,'0')}`,84,H-70);
   const b=Math.floor(t/BEAT)%4;for(let i=0;i<4;i++){const x=W-84-(3-i)*22-14;ctx.lineWidth=1.5;ctx.strokeStyle=col;if(i===b)ctx.fillRect(x,H-84,14,14);else ctx.strokeRect(x+0.75,H-83.25,12.5,12.5)}
-  ctx.textAlign='right';ctx.fillText('120 BPM',W-84-4*22-14,H-70);ctx.restore()}
+  ctx.textAlign='right';ctx.fillText('96 BPM',W-84-4*22-14,H-70);ctx.restore()}
 let GRAIN=null,VIG=null;
 function initFinish(){GRAIN=[0,1,2,3].map(k=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),id=g.createImageData(256,256),r=rng(99+k);for(let i=0;i<id.data.length;i+=4){const v=r()*255;id.data[i]=id.data[i+1]=id.data[i+2]=v;id.data[i+3]=255}g.putImageData(id,0,0);return ctx.createPattern(c,'repeat')});
   VIG=ctx.createRadialGradient(W/2,H/2,380,W/2,H/2,1200);VIG.addColorStop(0,'rgba(0,0,0,0)');VIG.addColorStop(1,'rgba(0,0,0,0.17)')}
@@ -374,16 +372,16 @@ const SCENES=[
   {a:26,b:99,id:'',name:'',draw:sOutro,hud:null},
 ];
 const PUNCH=[4,6,10,12,14,16,18,22,24];
-function render(t){
+function render(T){const t=T/TS;
   ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
   const sc=SCENES.find(s=>t>=s.a&&t<s.b);
   ctx.save();
-  const cut=PUNCH.filter(c=>c<=t).pop();if(cut!==undefined&&t-cut<0.5){const p=Math.exp(-(t-cut)/0.09),s=1+0.045*p;ctx.translate(W/2,H/2);ctx.rotate(0.008*p*(cut%4?1:-1));ctx.scale(s,s);ctx.translate(-W/2,-H/2)}
+  const cut=PUNCH.filter(c=>c<=t).pop();if(cut!==undefined&&t-cut<0.5){const p=Math.exp(-(t-cut)/0.12),s=1+0.018*p;ctx.translate(W/2,H/2);ctx.rotate(0.002*p*(cut%4?1:-1));ctx.scale(s,s);ctx.translate(-W/2,-H/2)}
   sc.draw(t);ctx.restore();
-  if(sc.hud)drawHUD(t,sc);
+  if(sc.hud)drawHUD(t,sc,T);
   ctx.save();ctx.fillStyle=VIG;ctx.fillRect(0,0,W,H);
-  const fr=Math.round(t*FPS),r=rng(fr+1);ctx.globalCompositeOperation='overlay';ctx.globalAlpha=0.06;ctx.translate(-r()*256,-r()*256);ctx.fillStyle=GRAIN[fr%4];ctx.fillRect(0,0,W+256,H+256);ctx.restore();
-  if(sc.hud){ctx.fillStyle=COL.red;ctx.fillRect(0,H-4,W*t/DUR,4)}
+  const gf=Math.floor(Math.round(T*FPS)/4),r=rng(gf+1);ctx.globalCompositeOperation='overlay';ctx.globalAlpha=0.035;ctx.translate(-r()*256,-r()*256);ctx.fillStyle=GRAIN[gf%4];ctx.fillRect(0,0,W+256,H+256);ctx.restore();
+  if(sc.hud){ctx.fillStyle=COL.red;ctx.fillRect(0,H-4,W*T/DUR,4)}
 }
 window.render=render;
 window.ready=(async()=>{await Promise.all([font(800,100,'Syne'),font(600,100,'Syne'),font(500,20,'JetBrains Mono'),font(400,80,'Instrument Serif','italic')].map(f=>document.fonts.load(f)));await document.fonts.ready;initParticles();initFinish();render(0);return true})();

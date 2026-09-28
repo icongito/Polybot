@@ -2,7 +2,7 @@
 // usage: node render.js ffmpegPath out_video.mp4 [fps]
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const { spawn } = require('child_process'), path = require('path');
-const [FF, OUT, FPSarg] = process.argv.slice(2); const FPS = +(FPSarg || 60), TOTAL = 30 * FPS, WORKERS = 4;
+const [FF, OUT, FPSarg] = process.argv.slice(2); const FPS = +(FPSarg || 60), TOTAL = Math.round(37.5 * FPS), WORKERS = 4;
 (async () => {
   const ff = spawn(FF, ['-y', '-hide_banner', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '12', '-pix_fmt', 'yuv420p', OUT], { stdio: ['pipe', 'inherit', 'inherit'] });
