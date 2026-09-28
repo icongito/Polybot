@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>until you asked</title>
+<style>
+@font-face { font-family: 'Hanken Grotesk'; font-weight: 100 900; src: url(fonts/HankenGrotesk-latin.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 400; src: url(fonts/IBMPlexMono-normal-400-latin.woff2) format('woff2'); }
+@font-face { font-family: 'EB Garamond'; src: url(fonts/EBGaramond-normal-400-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: 'EB Garamond'; src: url(fonts/EBGaramond-normal-400-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+1E00-1EFF; }
+@font-face { font-family: 'EB Garamond'; src: url(fonts/EBGaramond-normal-400-cyrillic.woff2) format('woff2'); unicode-range: U+0400-045F, U+0490-0491; }
+@font-face { font-family: 'EB Garamond'; src: url(fonts/EBGaramond-normal-400-greek.woff2) format('woff2'); unicode-range: U+0370-03FF; }
+@font-face { font-family: 'Noto Serif SC'; src: url(fonts/NotoSerifSC-sub.woff2) format('woff2'); }
+@font-face { font-family: 'Noto Serif JP'; src: url(fonts/NotoSerifJP-sub.woff2) format('woff2'); }
+@font-face { font-family: 'Noto Serif KR'; src: url(fonts/NotoSerifKR-sub.woff2) format('woff2'); }
+@font-face { font-family: 'Noto Naskh Arabic'; src: url(fonts/NotoNaskhArabic-sub.woff2) format('woff2'); }
+@font-face { font-family: 'Noto Serif Devanagari'; src: url(fonts/NotoSerifDevanagari-sub.woff2) format('woff2'); }
+@font-face { font-family: 'Noto Serif Hebrew'; src: url(fonts/NotoSerifHebrew-sub.woff2) format('woff2'); }
+@font-face { font-family: 'Noto Serif Georgian'; src: url(fonts/NotoSerifGeorgian-sub.woff2) format('woff2'); }
+html, body { margin: 0; height: 100%; background: #0A0B0D; overflow: hidden; }
+canvas { display: block; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #0A0B0D; }
+#ui { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #0A0B0D; color: #F2EEE6;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif; transition: opacity .6s ease; padding: 0 16px; text-align: center; }
+#ui.gone { opacity: 0; pointer-events: none; }
+#ui h1 { font-weight: 400; font-size: clamp(34px, 6vw, 58px); margin: 0 0 .3em; }
+#ui p { color: #8C8C8C; font-size: 14px; margin: 0 0 28px; }
+#ui button { font: inherit; font-size: 14px; letter-spacing: .06em; background: none; border: 1px solid #F2EEE6; color: #F2EEE6; padding: 10px 26px; cursor: pointer; }
+#ui button:hover, #ui button:focus-visible { background: #F2EEE6; color: #0A0B0D; outline: none; }
+#ui button:disabled { opacity: .4; cursor: default; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><div>
+  <h1>until you asked</h1>
+  <p>30 seconds. sound on.</p>
+  <button id="go" disabled>loading…</button>
+</div></div>
+<script src="film.js"></script>
+</body>
+</html>
